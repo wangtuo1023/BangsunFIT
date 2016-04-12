@@ -13,19 +13,24 @@ import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.UUID;
+
+import com.alibaba.fastjson.JSONArray;
+import com.alibaba.fastjson.JSONObject;
+
 import bangsun.InDataDomain;
 
 public class CallBs {
 
 	private String writeFilePath = null;
-
+	private IdWorker idWorker = IdWorker.getFlowIdWorkerInstance();
+	
 	public static void main(String[] args) {
 		BufferedReader brIn = new BufferedReader(new InputStreamReader(
 				System.in));
 		CallBs bs = new CallBs(args[0]);
 		bs.controller(brIn);
 	}
-	
+
 	public CallBs(String writeFiltePath) {
 		this.writeFilePath = writeFiltePath;
 	}
@@ -86,7 +91,8 @@ public class CallBs {
 			conn.setDoInput(true);
 			out = new PrintWriter(conn.getOutputStream());
 
-			String uuid = getUUID();
+//			String uuid = getUUID();
+			String uuid = Long.toString(idWorker.nextId()); 
 			StringBuffer sb = new StringBuffer();
 			sb.append("[{ ")
 					.append("\"@type\":\"cn.com.bsfit.frms.obj.AuditObject\"")
@@ -105,15 +111,33 @@ public class CallBs {
 			out.flush();
 			in = new BufferedReader(
 					new InputStreamReader(conn.getInputStream()));
-			String line;
+			String line = null, logFileString = null;
 			while ((line = in.readLine()) != null) {
 				result += line;
+				// TODO 解析json
+				JSONArray b = JSONArray.parseArray(result);
+				JSONObject c = (JSONObject) b.get(0);
+				try {
+					JSONArray d = (JSONArray) c.get("risks");
+					JSONObject e = (JSONObject) d.get(0);
+					logFileString = String.format("s%,s%,s%,s%,s%",
+							domain.getFrms_ip_user(), domain.getFrms_url(),
+							e.get("uuid"), e.get("createTime"),
+							((String) e.get("ruleName")).substring(0, 1));
+					// System.out.println(domain.getFrms_ip_user() + ","
+					// + domain.getFrms_url() + "," + e.get("uuid") + ","
+					// + e.get("createTime") + ","
+					// + ((String) e.get("ruleName")).substring(0, 1));
+				} catch (Exception e) {
+					// e.printStackTrace();
+				}
+
 			}
-//			System.out.println(result);
+			// System.out.println(result);
 			// 写文件记录日志
-			writeFile(fw, uuid, sb.toString(), result);
+			writeFile(fw, uuid, sb.toString(), logFileString);
 		} catch (Exception e) {
-//			System.out.println("发送 POST请求出现异常！" + e);
+			// System.out.println("发送 POST请求出现异常！" + e);
 			e.printStackTrace();
 		}
 		// 使用finally块来关闭输出流、输入流
@@ -158,14 +182,15 @@ public class CallBs {
 
 		return dt.getTime();
 	}
-	
-	
+
 	/**
 	 * 获取当前时间，记日志用。
+	 * 
 	 * @return 当前时间，yyyyMMddHHmmssSSS型
 	 */
-	private String getCurrentTime(){
-		SimpleDateFormat yyyyMMddHHmmssSSS = new SimpleDateFormat("yyyy/MM/dd HH:mm:ss.SSS");
+	private String getCurrentTime() {
+		SimpleDateFormat yyyyMMddHHmmssSSS = new SimpleDateFormat(
+				"yyyy/MM/dd HH:mm:ss.SSS");
 		return "[" + yyyyMMddHHmmssSSS.format(new Date()) + "] ";
 	}
 
@@ -205,8 +230,9 @@ public class CallBs {
 	private String generateWriteFileString(String uuid, String request,
 			String response) {
 		StringBuffer sb = new StringBuffer();
-		sb.append(getCurrentTime() + "Request >>> ").append(request).append("\n")
-				.append(getCurrentTime() + "Response >>> ").append(response).append("\n");
+		sb.append(getCurrentTime() + "Request >>> ").append(request)
+				.append("\n").append(getCurrentTime() + "Response >>> ")
+				.append(response).append("\n");
 		return sb.toString();
 	}
 

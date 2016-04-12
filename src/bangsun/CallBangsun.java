@@ -17,6 +17,7 @@ import java.util.UUID;
 
 import com.alibaba.fastjson.JSON;
 import com.alibaba.fastjson.JSONArray;
+import com.alibaba.fastjson.JSONObject;
 
 import bangsun.InDataDomain;
 
@@ -24,8 +25,9 @@ public class CallBangsun {
 
 	private String readFilePath = null;
 	private String writeFilePath = null;
+	private IdWorker idWorker = IdWorker.getFlowIdWorkerInstance();
 
-	public static void main(String[] args) {
+	public static void main(String[] args) throws Exception {
 //		CallBangSheng bs = new CallBangSheng("F:/aMidFolder/log.txt" , "F:/aMidFolder/log_result.txt");
 		CallBangsun bs = new CallBangsun(args[0] , args[1]);
 		bs.controller();
@@ -97,7 +99,8 @@ public class CallBangsun {
 			conn.setDoInput(true);
 			out = new PrintWriter(conn.getOutputStream());
 
-			String uuid = getUUID(); 
+//			String uuid = getUUID(); 
+			String uuid = Long.toString(idWorker.nextId()); 
 			StringBuffer sb = new StringBuffer();
 			sb.append("[{ ")
 					.append("\"@type\":\"cn.com.bsfit.frms.obj.AuditObject\"")
@@ -115,19 +118,30 @@ public class CallBangsun {
 			String line;
 			while ((line = in.readLine()) != null) {
 				result += line;
-				// TODO 调用fastjson
-				JSONArray jsonArray = JSON.parseArray(result);
-				for(Object obj : jsonArray)
-				{
-//					JSON.parseObject(text)
+				// TODO 解析json
+				JSONArray b = JSONArray.parseArray(result);
+				JSONObject c = (JSONObject) b.get(0);
+				try {
+					JSONArray d = (JSONArray) c.get("risks");
+					JSONObject e = (JSONObject) d.get(0);
+					System.out.println(String.format("s%,s%,s%,s%,s%",
+							domain.getFrms_ip_user(), domain.getFrms_url(),
+							e.get("uuid"), e.get("createTime"),
+							((String) e.get("ruleName")).substring(0, 1)));
+//					System.out.println(domain.getFrms_ip_user() + ","
+//							+ domain.getFrms_url() + "," + e.get("uuid") + ","
+//							+ e.get("createTime") + ","
+//							+ ((String) e.get("ruleName")).substring(0, 1));
+				} catch (Exception e) {
+//					e.printStackTrace();
 				}
 				
 			}
-			System.out.println(result);
+//			System.out.println(result);
 			// 写文件记录日志
 			writeFile(fw ,uuid ,sb.toString(), result);
 		} catch (Exception e) {
-			System.out.println("发送 POST请求出现异常！" + e);
+//			System.out.println("发送 POST请求出现异常！" + e);
 			e.printStackTrace();
 		}
 		// 使用finally块来关闭输出流、输入流
