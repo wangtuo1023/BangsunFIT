@@ -5,7 +5,7 @@ import java.io.InputStreamReader;
 
 public class ReadShellByRuntime {
 	public static void main(String[] args) {
-		Process p = null;
+//		Process p = null;
 		BufferedReader in = null;
 		try {
 //			String cmds = args[0];
