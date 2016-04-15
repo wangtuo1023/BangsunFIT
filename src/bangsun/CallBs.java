@@ -21,18 +21,20 @@ import bangsun.InDataDomain;
 
 public class CallBs {
 
-	private String writeFilePath = null;
-	private IdWorker idWorker = IdWorker.getFlowIdWorkerInstance();
+	private String resultFilePath = null;
+	private String exceptionLogFilePath = null;
+//	private IdWorker idWorker = IdWorker.getFlowIdWorkerInstance();
 	
 	public static void main(String[] args) {
 		BufferedReader brIn = new BufferedReader(new InputStreamReader(
 				System.in));
-		CallBs bs = new CallBs(args[0]);
+		CallBs bs = new CallBs(args[0] , args[1]);
 		bs.controller(brIn);
 	}
 
-	public CallBs(String writeFiltePath) {
-		this.writeFilePath = writeFiltePath;
+	public CallBs(String resultFilePath , String exceptionLogFilePath) {
+		this.resultFilePath = resultFilePath;
+		this.exceptionLogFilePath = exceptionLogFilePath;
 	}
 
 	private void controller(BufferedReader brIn) {
@@ -40,9 +42,11 @@ public class CallBs {
 		InDataDomain domain = null;
 		try {
 			// 声明文件：调用完记日志的文件
-			File logFile = new File(writeFilePath);
-			FileWriter fw = new FileWriter(logFile);
-
+			File resultFile = new File(resultFilePath);
+			FileWriter resultFileWriter = new FileWriter(resultFile);
+			File exceptionLogFile = new File(exceptionLogFilePath);
+			FileWriter exceptionFileWriter = new FileWriter(exceptionLogFile);
+			
 			// 数据源：标准输入流
 			String line = brIn.readLine();
 			while (line != null) {
@@ -53,14 +57,15 @@ public class CallBs {
 				domain.setFrms_url(arr[1].trim());
 				domain.setFrms_ip_cdn(arr[2].trim());
 				domain.setFrms_ip_user(arr[3].trim());
+				domain.setUser_name(arr[4].trim());
 				// 调用接口
-				call(fw, domain);
+				call(resultFileWriter, exceptionFileWriter, domain , line);
 				// 继续读取输入流的数据
 				line = brIn.readLine();
 			}
 			// 关闭
 			brIn.close();
-			fw.close();
+			resultFileWriter.close();
 
 		} catch (FileNotFoundException e) {
 			e.printStackTrace();
@@ -75,10 +80,11 @@ public class CallBs {
 	 * @param domain
 	 *            入参是拼接json串的几个属性
 	 */
-	private void call(FileWriter fw, InDataDomain domain) {
+	private void call(FileWriter resultFileWriter, FileWriter exceptionFileWriter,InDataDomain domain , String inputLine) {
 		PrintWriter out = null;
 		BufferedReader in = null;
 		String result = "";
+		String uuid = null;
 		try {
 			URL realUrl = new URL("http://10.2.240.100:8686/audit");
 			URLConnection conn = realUrl.openConnection();
@@ -91,12 +97,13 @@ public class CallBs {
 			conn.setDoInput(true);
 			out = new PrintWriter(conn.getOutputStream());
 
-//			String uuid = getUUID();
-			String uuid = Long.toString(idWorker.nextId()); 
+			uuid = getUUID();
+//			uuid = Long.toString(idWorker.nextId()); 
 			StringBuffer sb = new StringBuffer();
 			sb.append("[{ ")
 					.append("\"@type\":\"cn.com.bsfit.frms.obj.AuditObject\"")
-					.append(",\"frms_biz_code\":\"PAY.QUERY\"")
+//					.append(",\"frms_biz_code\":\"PAY.QUERY\"")
+					.append(",\"frms_biz_code\":\"PAY.REG\"")
 					.append(",\"frms_ip\":")
 					.append("\"" + domain.getFrms_ip_user() + "\"")
 					.append(",\"frms_ip_cdn\":")
@@ -106,38 +113,34 @@ public class CallBs {
 					.append(",\"frms_url\":")
 					.append("\"" + domain.getFrms_url() + "\"")
 					.append(",\"frms_uuid\":").append("\"" + uuid + "\"")
+					.append(",\"frms_user_id\":").append("\"" + domain.getUser_name() + "\"")
 					.append("}]");
 			out.print(sb.toString());
 			out.flush();
 			in = new BufferedReader(
 					new InputStreamReader(conn.getInputStream()));
-			String line = null, logFileString = null;
+			String line = null, logFileString = "-1";
 			while ((line = in.readLine()) != null) {
 				result += line;
-				// TODO 解析json
+				// 解析json
 				JSONArray b = JSONArray.parseArray(result);
 				JSONObject c = (JSONObject) b.get(0);
 				try {
 					JSONArray d = (JSONArray) c.get("risks");
 					JSONObject e = (JSONObject) d.get(0);
-					logFileString = String.format("s%,s%,s%,s%,s%",
-							domain.getFrms_ip_user(), domain.getFrms_url(),
-							e.get("uuid"), e.get("createTime"),
-							((String) e.get("ruleName")).substring(0, 1));
-					// System.out.println(domain.getFrms_ip_user() + ","
-					// + domain.getFrms_url() + "," + e.get("uuid") + ","
-					// + e.get("createTime") + ","
-					// + ((String) e.get("ruleName")).substring(0, 1));
+//					2016.04.14 拿ruleName里的“规则名称”，是数组第2个元素
+//					logFileString = ((String) e.get("ruleName")).substring(0, 1);
+					logFileString = (((String) e.get("ruleName")).split(":"))[1].trim();
 				} catch (Exception e) {
-					// e.printStackTrace();
+					logFileString = "0";
 				}
 
 			}
-			// System.out.println(result);
 			// 写文件记录日志
-			writeFile(fw, uuid, sb.toString(), logFileString);
+			writeResultFile(resultFileWriter, uuid, inputLine, logFileString);
 		} catch (Exception e) {
 			// System.out.println("发送 POST请求出现异常！" + e);
+			writeExceptionLogFile(exceptionFileWriter, uuid, inputLine,"-2", e);
 			e.printStackTrace();
 		}
 		// 使用finally块来关闭输出流、输入流
@@ -206,10 +209,33 @@ public class CallBs {
 	 * @param response
 	 *            流立方返回的结果
 	 */
-	private void writeFile(FileWriter fw, String uuid, String request,
+	private void writeResultFile(FileWriter fw, String uuid, String request,
 			String response) {
 		try {
 			fw.write(generateWriteFileString(uuid, request, response));
+			fw.flush();
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+	}
+	
+	
+	/**
+	 * 将查询流立方的异常信息写入文件
+	 * 
+	 * @param fw
+	 *            FileWriter
+	 * @param uuid
+	 *            UUID
+	 * @param request
+	 *            查询请求
+	 * @param response
+	 *            流立方返回的结果
+	 */
+	private void writeExceptionLogFile(FileWriter fw, String uuid, String request,
+			String response , Exception exception) {
+		try {
+			fw.write(generateWriteFileString(uuid, request, response) + exception.getMessage());
 			fw.flush();
 		} catch (IOException e) {
 			e.printStackTrace();
@@ -230,8 +256,7 @@ public class CallBs {
 	private String generateWriteFileString(String uuid, String request,
 			String response) {
 		StringBuffer sb = new StringBuffer();
-		sb.append(getCurrentTime() + "Request >>> ").append(request)
-				.append("\n").append(getCurrentTime() + "Response >>> ")
+		sb.append(getCurrentTime() + " ").append(request).append(" ")
 				.append(response).append("\n");
 		return sb.toString();
 	}

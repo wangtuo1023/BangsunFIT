@@ -60,8 +60,9 @@ public class CallBangsun {
 					domain.setFrms_url(arr[1].trim());
 					domain.setFrms_ip_cdn(arr[2].trim());
 					domain.setFrms_ip_user(arr[3].trim());
+					domain.setUser_name(arr[4].trim());
 					// 调用接口
-					call(fw ,domain);
+					call(fw ,domain , line);
 					// 继续读取输入流的数据
 					line = br.readLine();
 				}
@@ -83,7 +84,7 @@ public class CallBangsun {
 	 * @param domain
 	 *            入参是拼接json串的几个属性
 	 */
-	private void call(FileWriter fw ,InDataDomain domain) {
+	private void call(FileWriter fw ,InDataDomain domain , String inputLine) {
 		PrintWriter out = null;
 		BufferedReader in = null;
 		String result = "";
@@ -104,42 +105,41 @@ public class CallBangsun {
 			StringBuffer sb = new StringBuffer();
 			sb.append("[{ ")
 					.append("\"@type\":\"cn.com.bsfit.frms.obj.AuditObject\"")
-					.append(",\"frms_biz_code\":\"PAY.QUERY\"")
-					.append(",\"frms_ip\":").append("\"" + domain.getFrms_ip_user() + "\"")
-					.append(",\"frms_ip_cdn\":").append("\"" + domain.getFrms_ip_cdn() + "\"")
-					.append(",\"frms_trans_time\":").append(domain.getFrms_trans_time())
-					.append(",\"frms_url\":").append("\"" + domain.getFrms_url() + "\"")
+					// .append(",\"frms_biz_code\":\"PAY.QUERY\"")
+					.append(",\"frms_biz_code\":\"PAY.REG\"")
+					.append(",\"frms_ip\":")
+					.append("\"" + domain.getFrms_ip_user() + "\"")
+					.append(",\"frms_ip_cdn\":")
+					.append("\"" + domain.getFrms_ip_cdn() + "\"")
+					.append(",\"frms_trans_time\":")
+					.append(domain.getFrms_trans_time())
+					.append(",\"frms_url\":")
+					.append("\"" + domain.getFrms_url() + "\"")
 					.append(",\"frms_uuid\":").append("\"" + uuid + "\"")
-					.append("}]");
+					.append(",\"frms_user_id\":")
+					.append("\"" + domain.getUser_name() + "\"").append("}]");
 			out.print(sb.toString());
 			out.flush();
 			in = new BufferedReader(
 					new InputStreamReader(conn.getInputStream()));
-			String line;
+			String line = null, logFileString = "-1";
 			while ((line = in.readLine()) != null) {
 				result += line;
-				// TODO 解析json
+				// 解析json
 				JSONArray b = JSONArray.parseArray(result);
 				JSONObject c = (JSONObject) b.get(0);
 				try {
 					JSONArray d = (JSONArray) c.get("risks");
 					JSONObject e = (JSONObject) d.get(0);
-					System.out.println(String.format("s%,s%,s%,s%,s%",
-							domain.getFrms_ip_user(), domain.getFrms_url(),
-							e.get("uuid"), e.get("createTime"),
-							((String) e.get("ruleName")).substring(0, 1)));
-//					System.out.println(domain.getFrms_ip_user() + ","
-//							+ domain.getFrms_url() + "," + e.get("uuid") + ","
-//							+ e.get("createTime") + ","
-//							+ ((String) e.get("ruleName")).substring(0, 1));
+//					logFileString = ((String) e.get("ruleName")).substring(0, 1);
+					logFileString = (((String) e.get("ruleName")).split(":"))[0].trim();
 				} catch (Exception e) {
-//					e.printStackTrace();
+					logFileString = "0";
 				}
 				
 			}
-//			System.out.println(result);
 			// 写文件记录日志
-			writeFile(fw ,uuid ,sb.toString(), result);
+			writeFile(fw ,uuid ,inputLine, logFileString);
 		} catch (Exception e) {
 //			System.out.println("发送 POST请求出现异常！" + e);
 			e.printStackTrace();
@@ -169,6 +169,18 @@ public class CallBangsun {
 		return UUID.randomUUID().toString();
 	}
 
+	
+	/**
+	 * 获取当前时间，记日志用。
+	 * 
+	 * @return 当前时间，yyyyMMddHHmmssSSS型
+	 */
+	private String getCurrentTime() {
+		SimpleDateFormat yyyyMMddHHmmssSSS = new SimpleDateFormat(
+				"yyyy/MM/dd HH:mm:ss.SSS");
+		return "[" + yyyyMMddHHmmssSSS.format(new Date()) + "] ";
+	}
+	
 	/**
 	 * 日期格式转换
 	 * 
@@ -193,7 +205,6 @@ public class CallBangsun {
 		try {
 			fw.write(generateWriteFileString(uuid,request, response));
 			fw.flush();
-//			fw.close();
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
@@ -202,9 +213,8 @@ public class CallBangsun {
 	private String generateWriteFileString(String uuid, String request,
 			String response) {
 		StringBuffer sb = new StringBuffer();
-		sb.append("<<< uuid >>> ").append(uuid).append("\n")
-				.append("Request >>> ").append(request).append("\n")
-				.append("Response >>> ").append(response).append("\n");
+		sb.append(getCurrentTime() + " ").append(request).append(" ")
+				.append(response).append("\n");
 		return sb.toString();
 	}
 	

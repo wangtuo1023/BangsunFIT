@@ -6,6 +6,7 @@ public class InDataDomain {
 	String frms_ip_cdn;
 	long frms_trans_time;
 	String frms_url;
+	String user_name;
 
 	public String getFrms_ip_user() {
 		return frms_ip_user;
@@ -31,6 +32,13 @@ public class InDataDomain {
 	}
 	public void setFrms_url(String frms_url) {
 		this.frms_url = frms_url;
+	}
+	
+	public String getUser_name() {
+		return user_name;
+	}
+	public void setUser_name(String user_name) {
+		this.user_name = user_name;
 	}
 	@Override
 	public String toString() {
