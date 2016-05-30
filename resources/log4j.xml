@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="UTF-8" ?>  
+<!DOCTYPE log4j:configuration SYSTEM "log4j.dtd">
+
+<log4j:configuration>
+	<appender name="stdout" class="org.apache.log4j.ConsoleAppender">
+		<layout class="org.apache.log4j.PatternLayout">
+			<param name="ConversionPattern" value="[%d{yyyy/MM/dd HH:mm:ss.SSS}]%C{1}.%M %m%n" />
+		</layout>
+	</appender>
+
+	<appender name="cassandraSystemLog" class="org.apache.log4j.DailyRollingFileAppender">
+		<param name="File" value="F:/cassandra/test_log/cassandra_system.log" />
+		<param name="Threshold" value="INFO" />
+		<param name="append" value="true" />
+		<param name="DatePattern" value=".yyyy-MM-dd-HH" />
+		<layout class="org.apache.log4j.PatternLayout">
+			<param name="ConversionPattern" value="[%d{yyyyMMddHHmmssSSS}] %m%n" />
+		</layout>
+		<filter class="org.apache.log4j.varia.LevelRangeFilter">
+			<param name="LevelMax" value="INFO" />
+			<param name="LevelMin" value="INFO" />
+			<param name="acceptOnMatch" value="true" />
+		</filter>
+	</appender>
+
+
+	<logger name="cassandra.systemLog" additivity="false">
+		<level value="INFO" />
+		<appender-ref ref="cassandraSystemLog" />
+	</logger>
+
+
+	<root>
+		<priority value="info" />
+		<!--appender-ref ref="stdout" / -->
+	</root>
+
+</log4j:configuration>  
