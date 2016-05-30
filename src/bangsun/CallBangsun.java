@@ -28,12 +28,16 @@ public class CallBangsun {
 	private IdWorker idWorker = IdWorker.getFlowIdWorkerInstance();
 
 	public static void main(String[] args) throws Exception {
-//		CallBangSheng bs = new CallBangSheng("F:/aMidFolder/log.txt" , "F:/aMidFolder/log_result.txt");
-		CallBangsun bs = new CallBangsun(args[0] , args[1]);
+		// CallBangSheng bs = new CallBangSheng("F:/aMidFolder/log.txt" ,
+		// "F:/aMidFolder/log_result.txt");
+		CallBangsun bs = new CallBangsun(args[0], args[1]);
 		bs.controller();
+
+		// CallBangsun bs = new CallBangsun("", "");
+		// bs.convertDate("020160411214640");
 	}
-	
-	public CallBangsun(String readFilePath , String writeFiltePath) {
+
+	public CallBangsun(String readFilePath, String writeFiltePath) {
 		this.readFilePath = readFilePath;
 		this.writeFilePath = writeFiltePath;
 	}
@@ -56,13 +60,21 @@ public class CallBangsun {
 					// 解析文件，放到domain
 					String[] arr = line.split(" ");
 					domain = new InDataDomain();
-					domain.setFrms_trans_time(convertDate(arr[0].trim()));
+
+					long frms_trans_time = 0;
+					frms_trans_time = convertDate(arr[0].trim());
+					if (frms_trans_time <= 0) {
+						line = br.readLine();
+						continue;
+					}
+					domain.setFrms_trans_time(frms_trans_time);
+
 					domain.setFrms_url(arr[1].trim());
 					domain.setFrms_ip_cdn(arr[2].trim());
 					domain.setFrms_ip_user(arr[3].trim());
 					domain.setUser_name(arr[4].trim());
 					// 调用接口
-					call(fw ,domain , line);
+					call(fw, domain, line);
 					// 继续读取输入流的数据
 					line = br.readLine();
 				}
@@ -84,7 +96,7 @@ public class CallBangsun {
 	 * @param domain
 	 *            入参是拼接json串的几个属性
 	 */
-	private void call(FileWriter fw ,InDataDomain domain , String inputLine) {
+	private void call(FileWriter fw, InDataDomain domain, String inputLine) {
 		PrintWriter out = null;
 		BufferedReader in = null;
 		String result = "";
@@ -100,8 +112,8 @@ public class CallBangsun {
 			conn.setDoInput(true);
 			out = new PrintWriter(conn.getOutputStream());
 
-//			String uuid = getUUID(); 
-			String uuid = Long.toString(idWorker.nextId()); 
+			// String uuid = getUUID();
+			String uuid = Long.toString(idWorker.nextId());
 			StringBuffer sb = new StringBuffer();
 			sb.append("[{ ")
 					.append("\"@type\":\"cn.com.bsfit.frms.obj.AuditObject\"")
@@ -129,19 +141,24 @@ public class CallBangsun {
 				JSONArray b = JSONArray.parseArray(result);
 				JSONObject c = (JSONObject) b.get(0);
 				try {
+					String cc = (String) c.get("retCode");
+					if (!"200".equals(cc.trim()))
+						continue;
 					JSONArray d = (JSONArray) c.get("risks");
 					JSONObject e = (JSONObject) d.get(0);
-//					logFileString = ((String) e.get("ruleName")).substring(0, 1);
-					logFileString = (((String) e.get("ruleName")).split(":"))[0].trim();
+					// logFileString = ((String) e.get("ruleName")).substring(0,
+					// 1);
+					logFileString = (((String) e.get("ruleName")).split(":"))[0]
+							.trim();
 				} catch (Exception e) {
 					logFileString = "0";
 				}
-				
+
 			}
 			// 写文件记录日志
-			writeFile(fw ,uuid ,inputLine, logFileString);
+			writeFile(fw, uuid, inputLine, logFileString);
 		} catch (Exception e) {
-//			System.out.println("发送 POST请求出现异常！" + e);
+			// System.out.println("发送 POST请求出现异常！" + e);
 			e.printStackTrace();
 		}
 		// 使用finally块来关闭输出流、输入流
@@ -159,7 +176,6 @@ public class CallBangsun {
 		}
 	}
 
-	
 	/**
 	 * 自动生成UUID
 	 * 
@@ -169,7 +185,6 @@ public class CallBangsun {
 		return UUID.randomUUID().toString();
 	}
 
-	
 	/**
 	 * 获取当前时间，记日志用。
 	 * 
@@ -180,7 +195,7 @@ public class CallBangsun {
 				"yyyy/MM/dd HH:mm:ss.SSS");
 		return "[" + yyyyMMddHHmmssSSS.format(new Date()) + "] ";
 	}
-	
+
 	/**
 	 * 日期格式转换
 	 * 
@@ -189,6 +204,10 @@ public class CallBangsun {
 	 * @return 返回long行的时间
 	 */
 	private long convertDate(String dateStr) {
+
+		if (dateStr.length() == 15 && dateStr.startsWith("0"))
+			dateStr = dateStr.substring(1, dateStr.length());
+
 		Date dt = null;
 		try {
 			SimpleDateFormat YYYY_MM_DD = new SimpleDateFormat("yyyyMMddHHmmss");
@@ -199,17 +218,17 @@ public class CallBangsun {
 
 		return dt.getTime();
 	}
-	
-	
-	private void writeFile(FileWriter fw , String uuid, String request, String response) {
+
+	private void writeFile(FileWriter fw, String uuid, String request,
+			String response) {
 		try {
-			fw.write(generateWriteFileString(uuid,request, response));
+			fw.write(generateWriteFileString(uuid, request, response));
 			fw.flush();
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
 	}
-	
+
 	private String generateWriteFileString(String uuid, String request,
 			String response) {
 		StringBuffer sb = new StringBuffer();
@@ -217,6 +236,5 @@ public class CallBangsun {
 				.append(response).append("\n");
 		return sb.toString();
 	}
-	
-	
+
 }
