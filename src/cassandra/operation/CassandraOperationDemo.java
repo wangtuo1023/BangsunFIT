@@ -1,9 +1,10 @@
-package bangsun.db;
+package cassandra.operation;
 
 import java.util.HashSet;
 import java.util.Set;
 
-import bangsun.log.LogUtil;
+
+import cassandra.log.LogUtil;
 
 import com.datastax.driver.core.BoundStatement;
 import com.datastax.driver.core.Cluster;

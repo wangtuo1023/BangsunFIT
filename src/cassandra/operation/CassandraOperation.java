@@ -1,4 +1,4 @@
-package bangsun.db;
+package cassandra.operation;
 
 
 /**

@@ -1,4 +1,4 @@
-package bangsun.db;
+package cassandra.operation;
 
 import com.datastax.driver.core.Session;
 
