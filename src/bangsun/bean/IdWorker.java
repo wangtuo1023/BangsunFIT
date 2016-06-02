@@ -1,4 +1,4 @@
-package bangsun;
+package bangsun.bean;
 
 /**
  * tweeter的snowflake 移植到Java: (a) id构成: 42位的时间前缀 + 10位的节点标识 +

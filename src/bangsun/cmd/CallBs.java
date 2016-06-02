@@ -1,4 +1,4 @@
-package bangsun;
+package bangsun.cmd;
 
 import com.alibaba.fastjson.JSONArray;
 import com.alibaba.fastjson.JSONObject;
@@ -13,7 +13,7 @@ import java.util.Date;
 import java.util.List;
 import java.util.UUID;
 
-import bangsun.InDataDomain;
+import bangsun.bean.InDataDomain;
 
 public class CallBs {
 

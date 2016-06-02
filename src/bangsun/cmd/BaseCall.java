@@ -1,4 +1,4 @@
-package bangsun;
+package bangsun.cmd;
 
 public class BaseCall {
 

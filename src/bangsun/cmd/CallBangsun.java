@@ -1,4 +1,4 @@
-package bangsun;
+package bangsun.cmd;
 
 import java.io.BufferedReader;
 import java.io.File;
@@ -19,7 +19,8 @@ import com.alibaba.fastjson.JSON;
 import com.alibaba.fastjson.JSONArray;
 import com.alibaba.fastjson.JSONObject;
 
-import bangsun.InDataDomain;
+import bangsun.bean.IdWorker;
+import bangsun.bean.InDataDomain;
 
 public class CallBangsun {
 

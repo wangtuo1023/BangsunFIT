@@ -1,4 +1,4 @@
-package bangsun;
+package bangsun.bean;
 
 public class InDataDomain {
 
